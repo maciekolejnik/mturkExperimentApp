@@ -1,0 +1,41 @@
+{
+  "name": "amtwebapp",
+  "version": "1.0.0",
+  "description": "an app to run AMT Trust Game experiment where participants play against a robot driven by our cognitive model",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nf start",
+    "build": "cd client && npm install && npm run build"
+  },
+  "engines": {
+    "node": "14.17.0"
+  },
+  "keywords": [
+    "amt",
+    "trust",
+    "game"
+  ],
+  "author": "Maciej Olejnik",
+  "license": "MIT",
+  "dependencies": {
+    "@google-cloud/firestore": "^4.12.3",
+    "@google-cloud/storage": "^5.8.5",
+    "assert": "^2.0.0",
+    "aws-sdk": "^2.953.0",
+    "bootstrap": "^4.6.0",
+    "bull": "^3.29.1",
+    "express": "^4.17.1",
+    "foreman": "^3.0.1",
+    "fs": "0.0.1-security",
+    "ioredis": "^4.27.9",
+    "react-bootstrap": "^1.6.1",
+    "redis": "^3.1.2",
+    "throng": "^5.0.0",
+    "webppl": "^0.9.15",
+    "webppl-cognitive-agents": "git://github.com/maciekolejnik/webppl-cognitive-agents.git",
+    "webppl-dp": "^0.1.1",
+    "xml2js": "^0.4.23",
+    "yargs": "^17.2.1"
+  }
+}

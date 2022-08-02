@@ -1,0 +1,125 @@
+<HTMLQuestion xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2011-11-11/HTMLQuestion.xsd">
+    <HTMLContent><![CDATA[
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>
+            <script type='text/javascript' src='https://s3.amazonaws.com/mturk-public/externalHIT_v1.js'></script>
+<!--            <style>-->
+<!--              a.disabled {pointer-events: none;}-->
+<!--            </style>-->
+        </head>
+        <body>
+
+
+        <div class="row" id="workContent">
+        <div class="col-xs-12 col-md-6 col-md-offset-3"><!-- Content for Worker -->
+            <p>We are conducting research of human decision-making in interactions with robots.
+                We have developed a <em>bot</em> that will be your opponent in a simple investment game.
+                Before playing the game, we will collect some basic demographic information from you and
+                you will complete a short questionnaire. We will then explain the game to you and verify
+                your understanding with a comprehension check. More information about the experiment is
+                available in the <a href="https://trust-game-experiment.herokuapp.com/info.pdf" target="_blank">Information Sheet</a><a ></a>, which
+                you must read before participating.
+            </p>
+
+            <p>
+                It should take you around 10 minutes to complete this task. Your base
+                remuneration is $0.2, but if you pass a comprehension check and complete
+                the game, you will be paid at least $1.8 in bonus. The size of the bonus
+                will depend on your performance in the game, with potential additional
+                earnings up to $3.
+            </p>
+            <p>
+                In the unlikely scenario of an application error preventing you from completing
+                the game, please take a screenshot and email it to maciej.olejnik@seh.ox.ac.uk along
+                with your worker ID, a brief explanation of what happened and any other relevant
+                evidence. Your assignment will then be approved.
+            </p>
+
+            <p><strong>Responsible Gaming</strong> – placing investments and gaming in general can be
+             addictive and may result in difficulties to stop. Do not participate in
+             this task if you have any concerns about whether this reward-based
+             experiment might adversely affect your behaviour.</p>
+
+            <p><strong>Make sure to leave this window open as you play the game.&nbsp;</strong>
+                When you are finished, you will return to this page to paste the provided code into the box.</p>
+
+            <form name='mturk_form' method='post' id='mturk_form' action='https://www.mturk.com/mturk/externalSubmit'>
+            <p><strong>Please note that you may only participate in this survey if you are 18 years of age or over.</strong></p>
+            <input id="age" name="age" required="" type="checkbox" />
+            <label for="age">I certify that I am 18 years of age or over.</label>
+
+            <p><strong>IMPORTANT: We have recently run a pilot experiment (HIT ID: 3OID399FYLWUQQPLVJ2GZE4HBI1FD4).
+             If you have completed that HIT, please do not proceed with this HIT. If you do,
+            your assignment will be rejected.</strong></p>
+            <input id="firstTime" name="firstTime" required="" type="checkbox" />
+            <label for="firstTime">I have not participated in the pilot study (HIT ID: 3OID399FYLWUQQPLVJ2GZE4HBI1FD4).</label>
+
+
+            <p><strong>If you have read the information above and agree to participate with the understanding that the data
+                (including any personal data) you submit will be processed accordingly, please tick the box below.</strong></p>
+            <input id="consent" name="consent" required="" type="checkbox" />
+            <label for="consent">Yes, I agree to take part.</label>
+
+                <p>If you checked the boxes above, proceed to the game by following the link below.</p>
+            <table class="table table-condensed table-bordered">
+                <colgroup>
+                    <col class="col-xs-4 col-md-4" />
+                    <col class="col-xs-8 col-md-8" />
+                </colgroup>
+                <tbody>
+                    <tr>
+                        <td><label>Game link:</label></td>
+                        <td><a id="webappLink" class="dont-break-out" href="https://trust-game-experiment.herokuapp.com/" target="_blank">https://trust-game-experiment.herokuapp.com/</a></td>
+                    </tr>
+                </tbody>
+            </table>
+            <!-- End Content for Worker -->
+
+            <!-- Input from Worker -->
+
+              <input type='hidden' value='' name='assignmentId' id='assignmentId'/>
+                <label for="code">Provide THE CODE YOU RECEIVED at the end of the game (NOT your worker ID) here:</label>
+              <p><input id="code" name="code" placeholder="e.g. abcdef1234" required="" type="text" /></p>
+              <p><input type='submit' id='submitButton' value='Submit' /></p></form>
+            <!-- End input from Worker -->
+        </div>
+        </div>
+<!-- Please note that Bootstrap CSS/JS and JQuery are 3rd party libraries that may update their url/code at any time. Amazon Mechanical Turk (MTurk) is including these libraries as a default option for you, but is not responsible for any changes to the external libraries --><!-- External CSS references -->
+<link crossorigin="anonymous" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" integrity="sha384-IS73LIqjtYesmURkDE9MXKbXqYA8rvKEp/ghicjem7Vc3mGRdQRptJSz60tvrB6+" rel="stylesheet" />
+
+
+        <script language='Javascript'>turkSetAssignmentID();</script>
+        <script>
+            var ageChk = document.getElementById("age");
+            var consentChk = document.getElementById("consent");
+            var firstTimeChk = document.getElementById("firstTime");
+            var anchor = document.getElementById("webappLink");
+            var linkOnClick = function(e){
+              e.preventDefault();
+              alert("Please confirm your age, confirm you have not participated in the
+                pilot study and agree to participate.");
+            };
+            // anchor.style.display = "none";
+            anchor.onclick = linkOnClick;
+
+            var enableIfAllChecked = function() {
+                if (ageChk.checked && consentChk.checked && firstTimeChk.checked) {
+                  // document.getElementById("webappLink").classList.remove('disabled');
+                  anchor.onclick = "";
+                } else {
+                  anchor.onclick = linkOnClick;
+                }
+            }
+
+            consentChk.onclick = enableIfAllChecked;
+            ageChk.onclick = enableIfAllChecked;
+            firstTimeChk.onclick = enableIfAllChecked;
+        </script>
+        </body>
+        </html>
+        ]]>
+    </HTMLContent>
+    <FrameHeight>0</FrameHeight>
+</HTMLQuestion>

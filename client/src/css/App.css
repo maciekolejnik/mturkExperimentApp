@@ -1,0 +1,61 @@
+body {
+  font: 14px "Lato", Futura, sans-serif;
+  margin: 20px;
+}
+
+#root {
+  max-width: 48rem;
+  /*margin-left: auto;*/
+  margin-right: auto;
+}
+
+img {
+  float: right;
+  margin-left: 20px;
+  margin-top: -10px;
+}
+
+div.error {
+  color: red;
+}
+
+div.success {
+  color: green;
+}
+
+div.questions {
+  margin-bottom: 10px;
+}
+
+p.important {
+  color: blue;
+}
+
+div.code-highlight {
+  text-align:center;
+  font: 18px "Lato", Futura, sans-serif;
+}
+
+label.question {
+  margin-bottom: 5px;
+}
+
+.App {
+  text-align: center;
+}
+
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}

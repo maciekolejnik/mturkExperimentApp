@@ -1,0 +1,188 @@
+/** auxiliary */
+let getAgentId = function(role) {
+  return {
+    investor: 0,
+    investee: 1
+  }[role]
+}
+
+/** Params passed in globalStore. They include:
+ *  - gameSpecificParams (an object specifying endowments and k)
+ *  - options (non-game specific params, i.e. horizon and beliefRepresentation)
+ *  - botParams
+ *  - botState (in serialisable form, must be processed)
+ *  - roles (an object {bot, opponent})
+ *  - history (an object { investments, returns })
+ * */
+
+let generateState = function(history, role) {
+  let state = {
+    turn: role,
+    investments: history.investments,
+    returns: history.returns
+  }
+  return state
+}
+
+let validateState = function(state) {
+  let turn = state.turn
+  let investmentsNo = state.investments.length
+  let returnsNo = state.returns.length
+  if (turn === 'investor') {
+    return investmentsNo === returnsNo
+  }
+  if (turn === 'investee') {
+    return investmentsNo === returnsNo + 1
+  }
+  // this should not happen
+  return false
+}
+
+let getOpponent = function(role, game) {
+  /** params and state of the opponent don't matter so set them randomly */
+  let dummyParams = {
+    goalCoeffs: [0.5,0.5],
+    metaParams: {
+      alpha: 1,
+      discountFactor: 1,
+      lookAhead: 1
+    }
+  }
+  let dummyState = function() {
+    let dummyArray = [undefined, undefined]
+    return {
+      belief: dummyArray,
+      mentalEstimations: dummyArray,
+      metaParamsEstimations: {
+        alpha: dummyArray,
+        lookAhead: dummyArray,
+        discountFactor: dummyArray
+      }
+    }
+  }()
+  let opponentId = getAgentId(role)
+  let opponent = makeAgent(dummyParams, opponentId, dummyState, game)
+  return opponent
+}
+
+let processBotState = function(serialisableState) {
+  let getPositiveNormalDiscretised = function(mean, dev, samples) {
+    let generate = function() {
+      let s = gaussian({mu: mean, sigma: dev})
+      if (s > 0) return s
+      return generate()
+    }
+    return Infer({method: 'forward', samples: samples, model: function() {
+        return generate()
+      }});
+  }
+
+  /** @param serialisableAlpha array of possible rationality values */
+  let processRationality = function(serialisableAlpha) {
+    // let expectedRationality = serialisableAlpha.expectedRationality
+    // let dev = serialisableAlpha.dev
+    // let result = getPositiveNormalDiscretised(expectedRationality, dev, 1)
+    let result = Categorical({vs: serialisableAlpha})
+    return result
+  }
+  let processLookahead = function(serialisableLookahead) {
+    let dist = function() {
+      let prior = Categorical(serialisableLookahead.prior)
+      let estimated = serialisableLookahead.estimated
+      if (estimated !== undefined) {
+        let posterior = Infer({method: 'enumerate'}, function() {
+          let s = sample(prior)
+          factor(-Math.abs(s - estimated))
+          return s
+        })
+        return posterior
+      }
+      return prior
+    }()
+    let simplify = serialisableLookahead.simplify
+    if (simplify) {
+      let exp = Math.round(expectation(dist))
+      return Delta({v: exp})
+    }
+    return dist
+  }
+  let processTrust = function(serialisableTrust) {
+    return Delta({v: serialisableTrust})
+  }
+  let processDiscountFactor = function(serialisableDiscountFactor) {
+    return Delta({v: serialisableDiscountFactor})
+  }
+
+  let metaParamsEstimations = serialisableState.metaParamsEstimations
+  let serialisableAlpha = metaParamsEstimations.alpha
+  let alpha = processRationality(serialisableAlpha)
+  let serialisableLookahead = metaParamsEstimations.lookAhead
+  let lookAhead = processLookahead(serialisableLookahead)
+  let trust = processTrust(serialisableState.trust)
+  let isInvestee = serialisableState.isInvestee
+  let belief = serialisableState.belief
+  let discountFactor = processDiscountFactor(metaParamsEstimations.discountFactor)
+  return {
+    belief: isInvestee ? [belief, undefined] : [undefined, belief],
+    mentalEstimations: isInvestee ? [[trust], undefined] : [undefined, [trust]],
+    metaParamsEstimations: {
+      alpha: isInvestee ? [alpha, undefined] : [undefined, alpha],
+      lookAhead: isInvestee ? [lookAhead, undefined] : [undefined, lookAhead],
+      discountFactor: isInvestee ? [discountFactor, undefined] : [undefined, discountFactor]
+    }
+  }
+}
+
+let getBot = function(role, params, state, game) {
+  let botId = getAgentId(role)
+  let bot = makeAgent(params, botId, state, game)
+  return bot
+}
+
+let printTrust = function(agent, name, state) {
+  let mentalState = agent.mentalState
+  let mentalRewards = agent.mentalRewards
+  let trust = mentalState(state,0)
+  let trustEstimation = mentalRewards(state)[0]
+  display(name + ": trust=" + trust + "; trust estimation=" + trustEstimation)
+}
+
+let main = function() {
+  debug('In computeActionScript.')
+  let gameSetup = makeTrustCSMG(globalStore.gameSpecificParams)
+  let game = makeCSMG(gameSetup, globalStore.options)
+  debug('Got the game.')
+  let botRole = globalStore.roles.bot
+  let history = globalStore.history
+  let state = generateState(history, botRole)
+  if (!validateState(state)) {
+    return {
+      ok: false,
+      message: "Found invalid state: bot's role = " + botRole + "; history: "
+        + toString(history)
+    }
+  }
+  // if (_.isEqual(botRole, 'investee') && history.investments[0] === 0) {
+  //   return {
+  //     ok: true,
+  //     action: 0
+  //   }
+  // }
+  // let opponent = getOpponent(globalStore.roles.opponent, game)
+  let botState = processBotState(globalStore.botState)
+  debug('Got bot state.')
+  let bot = getBot(botRole, globalStore.botParams, botState, game)
+  printTrust(bot, "bot", state);
+  let act = bot.act
+  let action = sample(act(state))
+  let belief = bot.belief
+  return {
+    ok: true,
+    action,
+    cache: {
+      belief
+    }
+  }
+}
+
+main()

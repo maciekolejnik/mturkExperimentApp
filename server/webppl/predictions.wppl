@@ -1,0 +1,207 @@
+/**
+ * This file is NOT meant to be run from commandline. Instead, run it from javascript
+ * and pass arguments via globalStore object. params are as follows:
+ * {
+        botSetup: {
+          initialState: {
+            belief, isInvestee, metaParamsEstimations, trust
+          },
+          params: {
+            goalCoeffs, metaParams, usesHeuristics
+          }
+        },
+        horizon: true/false,
+        history: array of {invested, returned}
+      }
+ */
+
+//Run with:
+//  * webppl examples/trustgame/src/predict.wppl --require . --require ./examples/trustgame --require webppl-fs
+//  * as we need to require webppl-cognitive-agents, trustgame, webppl-fs
+//  *
+
+let processBotState = function(serialisableState) {
+  let getPositiveNormalDiscretised = function(mean, dev, samples) {
+    let generate = function() {
+      let s = gaussian({mu: mean, sigma: dev})
+      if (s > 0) return s
+      return generate()
+    }
+    return Infer({method: 'forward', samples: samples, model: function() {
+        return generate()
+      }});
+  }
+
+  /** @param serialisableAlpha array of possible rationality values */
+  let processRationality = function(serialisableAlpha) {
+    // let expectedRationality = serialisableAlpha.expectedRationality
+    // let dev = serialisableAlpha.dev
+    // let result = getPositiveNormalDiscretised(expectedRationality, dev, 1)
+    let result = Categorical({vs: serialisableAlpha})
+    return result
+  }
+  let processLookahead = function(serialisableLookahead) {
+    let dist = function() {
+      let prior = Categorical(serialisableLookahead.prior)
+      let estimated = serialisableLookahead.estimated
+      if (estimated !== undefined) {
+        let posterior = Infer({method: 'enumerate'}, function() {
+          let s = sample(prior)
+          factor(-Math.abs(s - estimated))
+          return s
+        })
+        return posterior
+      }
+      return prior
+    }()
+    let simplify = serialisableLookahead.simplify
+    if (simplify) {
+      let exp = Math.round(expectation(dist))
+      return Delta({v: exp})
+    }
+    return dist
+  }
+  let processTrust = function(serialisableTrust) {
+    return Delta({v: serialisableTrust})
+  }
+  let processDiscountFactor = function(serialisableDiscountFactor) {
+    return Delta({v: serialisableDiscountFactor})
+  }
+
+  let metaParamsEstimations = serialisableState.metaParamsEstimations
+  let serialisableAlpha = metaParamsEstimations.alpha
+  let alpha = processRationality(serialisableAlpha)
+  let serialisableLookahead = metaParamsEstimations.lookAhead
+  let lookAhead = processLookahead(serialisableLookahead)
+  let trust = processTrust(serialisableState.trust)
+  let isInvestee = serialisableState.isInvestee
+  let belief = serialisableState.belief
+  let discountFactor = processDiscountFactor(metaParamsEstimations.discountFactor)
+  return {
+    belief: isInvestee ? [belief, undefined] : [undefined, belief],
+    mentalEstimations: isInvestee ? [[trust], undefined] : [undefined, [trust]],
+    metaParamsEstimations: {
+      alpha: isInvestee ? [alpha, undefined] : [undefined, alpha],
+      lookAhead: isInvestee ? [lookAhead, undefined] : [undefined, lookAhead],
+      discountFactor: isInvestee ? [discountFactor, undefined] : [undefined, discountFactor]
+    }
+  }
+}
+
+/** TODO: this should probably not be hardcoded */
+let params = {
+  endowments : {
+    investor: 4,
+    investee: 0
+  },
+  k: 2,
+  horizon: 7,
+  beliefRepresentation: 'dirichlet'
+}
+
+/** format: array of {invested, returned} objects */
+let history = globalStore.history
+// let actions = [
+//   [3,4],
+//   [4,4],
+//   [4,2],
+//   [2,1],
+//   [0,0],
+//   [2,3],
+//   [4,0],
+// ]
+
+// let horizon = globalStore.horizon
+// let predictingAgent = globalStore.predictingAgent
+// let predictingAgent = 0
+
+let botSetup = globalStore.botSetup
+// let prior = {
+//   belief: [null, null],
+//   mentalEstimations: [null, null],
+//   metaParamsEstimations: {
+//     alpha: [null, Delta({v: 10})],
+//     lookAhead: [null, Delta({v: 2})],
+//     discountFactor: [null, Delta({v: 3})],
+//   }
+// }
+
+let externalParams = {beliefRepresentation: 'dirichlet'}
+let csmg = makeCSMG(makeTrustCSMG(params), externalParams)
+info("predictions.wppl: got game")
+let transitionFn = csmg.transitionFn
+let initialState = csmg.initialState
+
+let botId = botSetup.initialState.isInvestee ? 1 : 0
+let botInitialState = processBotState(botSetup.initialState)
+let bot = makeAgent(botSetup.params, botId, botInitialState, csmg)
+info("predictions.wppl: got agent")
+let act = bot.act
+
+let computePMSE = function(dist, observedAction) {
+  let support = dist.support()
+  let pmse = reduceL(function(acc, predictedAction) {
+    let prob = Math.exp(dist.score(predictedAction))
+    let error = predictedAction - observedAction
+    return acc + prob * Math.pow(error, 2)
+  }, 0, support)
+  return pmse
+}
+
+let computeFracMSE = function(dist, observedAction) {
+  let exp = expectation(dist)
+  return Math.pow(observedAction - exp, 2)
+}
+
+/** take the most likely action from dist and use
+ * that for MSE */
+let computeMSE = function(dist, observedAction) {
+  let support = dist.support()
+  if (support.length === 0) {
+    error('computeMSE: given distribution has empty support')
+  }
+  let elemProbPairs = map(function(elem) {
+    return [Math.exp(dist.score(elem)), elem]
+  }, support)
+  let sorted = sort(elemProbPairs, gt, fst)
+  /** normally we would just want to take the most likely one,
+   * but check if there are multiple with the same prob and if so,
+   * choose randomly */
+  let highestProb = sorted[0][0]
+  let mostLikelyPairs = filter(function(elem) {
+    return Math.abs(elem[0] - highestProb) < 0.000001
+  }, sorted)
+  let mostLikelyActions = map(function(pair) {
+    return pair[1]
+  }, mostLikelyPairs)
+  let predictedAction = uniformDraw(mostLikelyActions)
+  let diff = predictedAction - observedAction
+  let se = Math.pow(diff, 2)
+  return se
+}
+
+info("predictions.wppl: evaluate predictions now")
+let evaluations = reduceL(function(acc, actions) {
+  let state = acc[0]
+  let invested = actions.invested
+  let returned = actions.returned
+  let nextState = sample(transitionFn(state, invested))
+  let lastState = sample(transitionFn(nextState, returned))
+  let isInvestee = botSetup.initialState.isInvestee
+  let predictionState = isInvestee ? state : nextState
+  let actionDist = act(predictionState)
+  let observedAction = isInvestee ? invested : returned
+  let pmse = computePMSE(actionDist, observedAction)
+  let se = computeMSE(actionDist, observedAction)
+  let fracSE = computeFracMSE(actionDist, observedAction)
+  let updatedAcc = {
+    pmses: acc[1].pmses.concat([pmse]),
+    mses: acc[1].mses.concat([se]),
+    fses: acc[1].fses.concat([fracSE])
+  }
+  return [lastState, updatedAcc]
+}, [initialState, {pmses: [], mses: [], fses: []}], history)[1]
+
+evaluations
+
+

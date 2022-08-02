@@ -1,0 +1,9 @@
+/.idea
+
+.DS_Store
+
+/node_modules
+
+amt-trust-game-cred-dev.json
+
+server/config.json
