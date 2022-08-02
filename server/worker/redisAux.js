@@ -6,9 +6,9 @@ const HEROKU_REDIS_URL =
 const REDIS_URL = HEROKU_REDIS_URL || "redis://127.0.0.1:6379";
 
 const redisSettings = {
-  tls: {
-    rejectUnauthorized: false
-  }
+  // tls: {
+  //   rejectUnauthorized: false
+  // }
 }
 const queueSettings = {
   lockDuration: 100000, // 100 seconds allowed per job

@@ -11,7 +11,7 @@ function setupPeriodicDebugLogs(callback) {
   assert(callback, `setupPeriodicDebugLogs(): a callback must 
   be passed but not found.`)
   if (debug) {
-    const interval = 60 * 1000 // 1 minute
+    const interval = 60 * 1000; // 1 minute
     setInterval(callback, interval);
   }
 }

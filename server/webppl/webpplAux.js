@@ -52,7 +52,7 @@ let callerId;
 
 function init(thisCallerId) {
   bundles = loadWebpplBundles();
-  // computeAction = loadAndCompileScript('computeAction.wppl', thisCallerId);
+  computeAction = loadAndCompileScript('computeAction.wppl', thisCallerId);
   // gameInitScript = loadAndCompileScript('gameInit.wppl', thisCallerId);
   prediction = loadAndCompileScript('predictions.wppl', thisCallerId);
   callerId = thisCallerId;

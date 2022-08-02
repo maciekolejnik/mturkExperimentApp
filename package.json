@@ -9,7 +9,7 @@
     "build": "cd client && npm install && npm run build"
   },
   "engines": {
-    "node": "14.17.0"
+    "node": "18.7.0"
   },
   "keywords": [
     "amt",
@@ -28,7 +28,6 @@
     "express": "^4.17.1",
     "foreman": "^3.0.1",
     "fs": "0.0.1-security",
-    "ioredis": "^4.27.9",
     "react-bootstrap": "^1.6.1",
     "redis": "^3.1.2",
     "throng": "^5.0.0",
